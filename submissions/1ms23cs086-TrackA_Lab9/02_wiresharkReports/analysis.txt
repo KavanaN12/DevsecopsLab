@@ -1,0 +1,84 @@
+Wireshark Network Analysis Report
+
+1. Objective:
+The objective of this analysis is to examine network-level behavior of the ShopHub application under different conditions (normal, slow, and error scenarios) and correlate it with application performance observed in Datadog.
+
+
+2. Capture Details:
+- Tool Used: Wireshark
+- Capture Interface: Localhost / active network adapter
+- Protocols Observed: HTTP, TCP, DNS
+- Traffic Type: Application requests generated using browser and PowerShell load testing
+
+
+3. Filters Applied:
+
+a) HTTP Traffic Filter:
+   http
+   → Used to isolate HTTP request/response packets.
+
+b) Slow / Delayed Packets Filter:
+   tcp.analysis.retransmission || tcp.time_delta > 1
+   → Identifies retransmissions and packets with high delay.
+
+c) DNS Traffic Filter:
+   dns
+   → Captures domain name resolution requests.
+
+
+4. TCP Stream Analysis:
+
+Three types of TCP streams were analyzed:
+
+a) Fast Request (/ endpoint):
+- Observed quick SYN → SYN-ACK → ACK handshake.
+- Minimal delay between request and response.
+- HTTP 200 OK response received.
+- No retransmissions or delays.
+→ Indicates normal system behavior.
+
+b) Slow Request (/slow endpoint):
+- Noticeable delay between request and response.
+- Higher tcp.time_delta values observed.
+- Response delayed due to intentional backend delay.
+→ Indicates application-level latency affecting network timing.
+
+c) Error Request (/error endpoint):
+- HTTP 500 Internal Server Error responses observed.
+- TCP connection established successfully, but server returned failure.
+- No retransmission, but response indicates server-side issue.
+→ Confirms backend error handling problem.
+
+
+5. DNS Analysis:
+- DNS queries observed during initial request phase.
+- Domain name resolution completed successfully.
+- No significant delay in DNS response.
+→ DNS is not a major contributor to latency in this setup.
+
+
+6. Observations:
+- Increased packet delay (tcp.time_delta) during slow endpoint requests.
+- TCP retransmissions observed during high load, indicating potential congestion.
+- Error responses (HTTP 500) captured clearly in packet streams.
+- Packet flow increased significantly during load testing.
+- Stable TCP handshake observed across all scenarios.
+
+
+7. Correlation with Datadog Metrics:
+- High latency observed in Datadog corresponds to increased tcp.time_delta in Wireshark.
+- Error spikes in Datadog align with HTTP 500 packets captured.
+- Increased throughput in Datadog matches higher packet volume in capture.
+- CPU spikes correlate with increased request load and packet activity.
+
+
+8. Latency Source Analysis:
+The primary sources of latency identified are:
+- Application-level delay (introduced in /slow endpoint)
+- Server processing overhead during load
+- Minor network delays under high traffic
+DNS resolution and TCP handshake were not significant contributors to latency.
+
+
+9. Conclusion:
+The Wireshark analysis confirms that performance degradation is primarily caused by backend processing delays and increased load on the application. Network-level observations support Datadog APM findings, demonstrating a strong correlation between system metrics and packet behavior.
